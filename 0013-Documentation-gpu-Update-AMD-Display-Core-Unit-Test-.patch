@@ -1,0 +1,115 @@
+From cfc63c6b22326263427c0493b9957d0ff0726648 Mon Sep 17 00:00:00 2001
+From: Joao Paulo Pereira da Silva <jppaulo11@usp.br>
+Date: Wed, 15 May 2024 08:38:21 -0300
+Subject: [PATCH 13/13] Documentation/gpu: Update AMD Display Core Unit Test
+ documentation
+
+Because of recent changes, Display Core unit tests documentation is a
+bit outdated. Therefore, update it to follow current configuration.
+
+Signed-off-by: Joao Paulo Pereira da Silva <jppaulo11@usp.br>
+---
+ .../gpu/amdgpu/display/display-test.rst       | 53 ++++++++++---------
+ 1 file changed, 27 insertions(+), 26 deletions(-)
+
+diff --git a/Documentation/gpu/amdgpu/display/display-test.rst b/Documentation/gpu/amdgpu/display/display-test.rst
+index a8c136ce87b7..cd921595ee37 100644
+--- a/Documentation/gpu/amdgpu/display/display-test.rst
++++ b/Documentation/gpu/amdgpu/display/display-test.rst
+@@ -15,14 +15,14 @@ How to run the tests?
+ =====================
+ 
+ In order to facilitate running the test suite, a configuration file is present
+-in ``drivers/gpu/drm/amd/display/tests/dc/.kunitconfig``. This configuration file
++in ``drivers/gpu/drm/amd/display/test/kunit/.kunitconfig``. This configuration file
+ can be used to run the kunit_tool, a Python script (``tools/testing/kunit/kunit.py``)
+ used to configure, build, exec, parse and run tests.
+ 
+ .. code-block:: bash
+ 
+ 	$ ./tools/testing/kunit/kunit.py run --arch=x86_64 \
+-	    --kunitconfig=drivers/gpu/drm/amd/display/tests
++           --kunitconfig=drivers/gpu/drm/amd/display/test/kunit
+ 
+ Currently, the Display Core Unit Tests are only supported on x86_64.
+ 
+@@ -34,10 +34,7 @@ you might add the following config options to your ``.config``:
+ 
+ 	CONFIG_KUNIT=y
+ 	CONFIG_AMDGPU=m
+-	CONFIG_AMD_DC_BASICS_KUNIT_TEST=y
+-	CONFIG_AMD_DC_KUNIT_TEST=y
+-	CONFIG_DCE_KUNIT_TEST=y
+-	CONFIG_DML_KUNIT_TEST=y
++	CONFIG_DRM_AMD_DC_KUNIT_TEST=y
+ 
+ Once the kernel is built and installed, you can load the ``amdgpu`` module
+ to run all tests available.
+@@ -49,10 +46,7 @@ following config options to your ``.config``:
+ 
+ 	CONFIG_KUNIT=y
+ 	CONFIG_AMDGPU=y
+-	CONFIG_AMD_DC_BASICS_KUNIT_TEST=y
+-	CONFIG_AMD_DC_KUNIT_TEST=y
+-	CONFIG_DCE_KUNIT_TEST=y
+-	CONFIG_DML_KUNIT_TEST=y
++	CONFIG_DRM_AMD_DC_KUNIT_TEST=y
+ 
+ In order to run specific tests, you can check the filter options from KUnit on
+ Documentation/dev-tools/kunit/kunit-tool.rst.
+@@ -60,29 +54,36 @@ Documentation/dev-tools/kunit/kunit-tool.rst.
+ How to add new tests?
+ =====================
+ 
+-Tests covering different parts of the Display Core are always welcomed. Adding
+-a new test is a simple procedure, that consists in creating a unit test file
+-and adding the following guard to the end of the tested file when you are
+-testing static functions:
++Tests covering different parts of the Display Core are always welcomed. When
++not testing static functions, adding a new test is a simple procedure, that
++consists in creating a unit test file and editing the Makefile
++(``display/test/kunit/Makefile``) to include the new test:
++
++.. code-block:: make
++
++	ifdef CONFIG_DRM_AMD_DC_KUNIT_TEST
++		DC_TESTS += my_kunit_test.o
++	endif
++
++Testing static functions is a bit more complicated since it's demanded that the
++function is made visible to the test file. This can be done by changing the
++``static`` keyword to VISIBLE_IF_KUNIT, and creating a conditional declaration
++of the function inside the header of the file being tested:
+ 
+ .. code-block:: c
+ 
+-	#ifdef CONFIG_MY_KUNIT_TEST
+-	#include "my_kunit_test.c"
+-	#endif
++	/* In my_file.c */
+ 
+-If you are not testing static functions, you should use the Makefile placed on
+-``display/tests``. In order to add a test to the Makefile, you can just add
+-the following entry to the Makefile:
++	VISIBLE_IF_KUNIT int do_interesting_thing();
+ 
+-.. code-block:: make
++	/* In my_file.h */
+ 
+-	ifdef CONFIG_MY_KUNIT_TEST
+-		DC_TESTS += my_kunit_test.o
+-	endif
++	#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
++	int do_interesting_thing(void);
++	#endif
+ 
+-The ``display/tests`` folder replicates the folder hierarchy of the ``display``
+-folder, so this must be considered while adding new tests.
++The ``display/test/kunit`` folder replicates the folder hierarchy of the
++``display`` folder, so this must be considered while adding new tests.
+ 
+ More information on how to write unit tests with the KUnit API can be provided
+ on Documentation/dev-tools/kunit/api/test.rst.
+-- 
+2.44.0
+

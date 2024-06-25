@@ -1,0 +1,388 @@
+From 10f9f184f6eb1bb924ad42988390bb8ba9e22c33 Mon Sep 17 00:00:00 2001
+From: Joao Paulo Pereira da Silva <jppaulo11@hotmail.com>
+Date: Mon, 13 May 2024 15:10:08 -0300
+Subject: [PATCH 11/13] drm/amd/display: Update tested files to follow the
+ preferred way
+
+In DRM subsystem, when testing static functions with kunit, it's not
+recommended that we conditionally #include the test file at the end of
+the .c file.
+Therefore, use VISIBLE_IF_KUNIT to conditionally make tested functions
+static.
+
+Signed-off-by: Joao Paulo Pereira da Silva <jppaulo11@usp.br>
+---
+ drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c  |  6 +--
+ drivers/gpu/drm/amd/display/dc/dc_dmub_srv.h  |  8 ++++
+ .../dc/dml/dcn20/display_mode_vba_20.c        | 26 +++++-----
+ .../dc/dml/dcn20/display_mode_vba_20.h        | 48 +++++++++++++++++++
+ .../dc/dml/dcn20/display_rq_dlg_calc_20.c     | 11 ++---
+ .../dc/dml/dcn20/display_rq_dlg_calc_20.h     |  6 +++
+ .../gpu/drm/amd/display/test/kunit/Makefile   | 20 +++++---
+ .../display/test/kunit/dc/dc_dmub_srv_test.c  |  1 +
+ .../dc/dml/dcn20/display_mode_vba_20_test.c   |  7 +++
+ .../dml/dcn20/display_rq_dlg_calc_20_test.c   |  1 +
+ 10 files changed, 103 insertions(+), 31 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c b/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c
+index 467ebc254e37..773b542a7221 100644
+--- a/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c
++++ b/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c
+@@ -36,6 +36,7 @@
+ #include "clk_mgr.h"
+ #include "dc_state_priv.h"
+ #include "dc_plane_priv.h"
++#include <kunit/visibility.h>
+ 
+ #define CTX dc_dmub_srv->ctx
+ #define DC_LOGGER CTX->logger
+@@ -548,7 +549,7 @@ void dc_dmub_srv_get_visual_confirm_color_cmd(struct dc *dc, struct pipe_ctx *pi
+  * 2. Calculate the min and max vtotal which supports SubVP + DRR microschedule
+  * 3. Populate the drr_info with the min and max supported vtotal values
+  */
+-static void populate_subvp_cmd_drr_info(struct dc *dc,
++VISIBLE_IF_KUNIT void populate_subvp_cmd_drr_info(struct dc *dc,
+ 		struct dc_state *context,
+ 		struct pipe_ctx *subvp_pipe,
+ 		struct pipe_ctx *vblank_pipe,
+@@ -1595,6 +1596,3 @@ bool dc_wake_and_execute_gpint(const struct dc_context *ctx, enum dmub_gpint_com
+ 	return result;
+ }
+ 
+-#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
+-#include "../test/kunit/dc/dc_dmub_srv_test.c"
+-#endif
+diff --git a/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.h b/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.h
+index 2c5866211f60..dc6b4d913588 100644
+--- a/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.h
++++ b/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.h
+@@ -160,4 +160,12 @@ bool dc_wake_and_execute_dmub_cmd_list(const struct dc_context *ctx, unsigned in
+ bool dc_wake_and_execute_gpint(const struct dc_context *ctx, enum dmub_gpint_command command_code,
+ 			       uint16_t param, uint32_t *response, enum dm_dmub_wait_type wait_type);
+ 
++#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
++void populate_subvp_cmd_drr_info(struct dc *dc,
++	struct dc_state *context,
++	struct pipe_ctx *subvp_pipe,
++	struct pipe_ctx *vblank_pipe,
++	struct dmub_cmd_fw_assisted_mclk_switch_pipe_data_v2 *pipe_data);
++#endif
++
+ #endif /* _DMUB_DC_SRV_H_ */
+diff --git a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.c b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.c
+index 2f5dc1ee917b..f4b08d0e4202 100644
+--- a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.c
++++ b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.c
+@@ -26,6 +26,7 @@
+ #include "../display_mode_lib.h"
+ #include "display_mode_vba_20.h"
+ #include "../dml_inline_defs.h"
++#include <kunit/visibility.h>
+ 
+ /*
+  * NOTE:
+@@ -45,13 +46,13 @@ static double adjust_ReturnBW(
+ 		double ReturnBW,
+ 		bool DCCEnabledAnyPlane,
+ 		double ReturnBandwidthToDCN);
+-static unsigned int dscceComputeDelay(
++VISIBLE_IF_KUNIT unsigned int dscceComputeDelay(
+ 		unsigned int bpc,
+ 		double bpp,
+ 		unsigned int sliceWidth,
+ 		unsigned int numSlices,
+ 		enum output_format_class pixelFormat);
+-static unsigned int dscComputeDelay(enum output_format_class pixelFormat);
++VISIBLE_IF_KUNIT unsigned int dscComputeDelay(enum output_format_class pixelFormat);
+ // Super monster function with some 45 argument
+ static bool CalculatePrefetchSchedule(
+ 		struct display_mode_lib *mode_lib,
+@@ -153,7 +154,7 @@ static unsigned int CalculateVMAndRowBytes(
+ 		bool *PTEBufferSizeNotExceeded,
+ 		unsigned int *dpte_row_height,
+ 		unsigned int *meta_row_height);
+-static double CalculateTWait(
++VISIBLE_IF_KUNIT double CalculateTWait(
+ 		unsigned int PrefetchMode,
+ 		double DRAMClockChangeLatency,
+ 		double UrgentLatencyPixelDataOnly,
+@@ -176,7 +177,7 @@ static double CalculateRemoteSurfaceFlipDelay(
+ 		double *SrcActiveDrainRate,
+ 		double *TInitXFill,
+ 		double *TslvChk);
+-static void CalculateActiveRowBandwidth(
++VISIBLE_IF_KUNIT void CalculateActiveRowBandwidth(
+ 		bool GPUVMEnable,
+ 		enum source_format_class SourcePixelFormat,
+ 		double VRatio,
+@@ -217,7 +218,7 @@ static void CalculateFlipSchedule(
+ 		double *DestinationLinesToRequestRowInImmediateFlip,
+ 		double *final_flip_bw,
+ 		bool *ImmediateFlipSupportedForPipe);
+-static double CalculateWriteBackDelay(
++VISIBLE_IF_KUNIT double CalculateWriteBackDelay(
+ 		enum source_format_class WritebackPixelFormat,
+ 		double WritebackHRatio,
+ 		double WritebackVRatio,
+@@ -297,7 +298,7 @@ static double adjust_ReturnBW(
+ 	return ReturnBW;
+ }
+ 
+-static unsigned int dscceComputeDelay(
++VISIBLE_IF_KUNIT unsigned int dscceComputeDelay(
+ 		unsigned int bpc,
+ 		double bpp,
+ 		unsigned int sliceWidth,
+@@ -364,7 +365,7 @@ static unsigned int dscceComputeDelay(
+ 	return pixels;
+ }
+ 
+-static unsigned int dscComputeDelay(enum output_format_class pixelFormat)
++VISIBLE_IF_KUNIT unsigned int dscComputeDelay(enum output_format_class pixelFormat)
+ {
+ 	unsigned int Delay = 0;
+ 
+@@ -2920,7 +2921,7 @@ static void dml20_DisplayPipeConfiguration(struct display_mode_lib *mode_lib)
+ 	}
+ }
+ 
+-static double CalculateTWait(
++VISIBLE_IF_KUNIT double CalculateTWait(
+ 		unsigned int PrefetchMode,
+ 		double DRAMClockChangeLatency,
+ 		double UrgentLatencyPixelDataOnly,
+@@ -2975,7 +2976,7 @@ static double CalculateRemoteSurfaceFlipDelay(
+ 	return result;
+ }
+ 
+-static double CalculateWriteBackDelay(
++VISIBLE_IF_KUNIT double CalculateWriteBackDelay(
+ 		enum source_format_class WritebackPixelFormat,
+ 		double WritebackHRatio,
+ 		double WritebackVRatio,
+@@ -3035,7 +3036,7 @@ static double CalculateWriteBackDelay(
+ 	return CalculateWriteBackDelay;
+ }
+ 
+-static void CalculateActiveRowBandwidth(
++VISIBLE_IF_KUNIT void CalculateActiveRowBandwidth(
+ 		bool GPUVMEnable,
+ 		enum source_format_class SourcePixelFormat,
+ 		double VRatio,
+@@ -3188,7 +3189,7 @@ static void CalculateFlipSchedule(
+ 	}
+ }
+ 
+-static unsigned int TruncToValidBPP(
++VISIBLE_IF_KUNIT unsigned int TruncToValidBPP(
+ 		double DecimalBPP,
+ 		bool DSCEnabled,
+ 		enum output_encoder_class Output,
+@@ -5117,6 +5118,3 @@ void dml20_ModeSupportAndSystemConfigurationFull(struct display_mode_lib *mode_l
+ 	}
+ }
+ 
+-#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
+-#include "../../test/kunit/dc/dml/dcn20/display_mode_vba_20_test.c"
+-#endif
+diff --git a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.h b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.h
+index 92b6805f4342..22e70b4aa0cf 100644
+--- a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.h
++++ b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.h
+@@ -29,4 +29,52 @@
+ void dml20_recalculate(struct display_mode_lib *mode_lib);
+ void dml20_ModeSupportAndSystemConfigurationFull(struct display_mode_lib *mode_lib);
+ 
++#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
++unsigned int dscceComputeDelay(
++	unsigned int bpc,
++	double bpp,
++	unsigned int sliceWidth,
++	unsigned int numSlices,
++	enum output_format_class pixelFormat);
++unsigned int dscComputeDelay(enum output_format_class pixelFormat);
++double CalculateTWait(
++	unsigned int PrefetchMode,
++	double DRAMClockChangeLatency,
++	double UrgentLatencyPixelDataOnly,
++	double SREnterPlusExitTime);
++void CalculateActiveRowBandwidth(
++	bool GPUVMEnable,
++	enum source_format_class SourcePixelFormat,
++	double VRatio,
++	bool DCCEnable,
++	double LineTime,
++	unsigned int MetaRowByteLuma,
++	unsigned int MetaRowByteChroma,
++	unsigned int meta_row_height_luma,
++	unsigned int meta_row_height_chroma,
++	unsigned int PixelPTEBytesPerRowLuma,
++	unsigned int PixelPTEBytesPerRowChroma,
++	unsigned int dpte_row_height_luma,
++	unsigned int dpte_row_height_chroma,
++	double *meta_row_bw,
++	double *dpte_row_bw,
++	double *qual_row_bw);
++double CalculateWriteBackDelay(
++	enum source_format_class WritebackPixelFormat,
++	double WritebackHRatio,
++	double WritebackVRatio,
++	unsigned int WritebackLumaHTaps,
++	unsigned int WritebackLumaVTaps,
++	unsigned int WritebackChromaHTaps,
++	unsigned int WritebackChromaVTaps,
++	unsigned int WritebackDestinationWidth);
++
++unsigned int TruncToValidBPP(
++	double DecimalBPP,
++	bool DSCEnabled,
++	enum output_encoder_class Output,
++	enum output_format_class Format,
++	unsigned int DSCInputBitPerComponent);
++#endif
++
+ #endif
+diff --git a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.c b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.c
+index 7c294b4fc06d..a7c44169ae37 100644
+--- a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.c
++++ b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.c
+@@ -26,6 +26,7 @@
+ #include "../display_mode_lib.h"
+ #include "../display_mode_vba.h"
+ #include "display_rq_dlg_calc_20.h"
++#include <kunit/visibility.h>
+ 
+ // Function: dml20_rq_dlg_get_rq_params
+ //  Calculate requestor related parameters that register definition agnostic
+@@ -76,7 +77,7 @@ static void calculate_ttu_cursor(struct display_mode_lib *mode_lib,
+ 
+ #include "../dml_inline_defs.h"
+ 
+-static unsigned int get_bytes_per_element(enum source_format_class source_format, bool is_chroma)
++VISIBLE_IF_KUNIT unsigned int get_bytes_per_element(enum source_format_class source_format, bool is_chroma)
+ {
+ 	unsigned int ret_val = 0;
+ 
+@@ -105,7 +106,7 @@ static unsigned int get_bytes_per_element(enum source_format_class source_format
+ 	return ret_val;
+ }
+ 
+-static bool is_dual_plane(enum source_format_class source_format)
++VISIBLE_IF_KUNIT bool is_dual_plane(enum source_format_class source_format)
+ {
+ 	bool ret_val = false;
+ 
+@@ -152,7 +153,7 @@ static double get_refcyc_per_delivery(struct display_mode_lib *mode_lib,
+ 
+ }
+ 
+-static unsigned int get_blk_size_bytes(const enum source_macro_tile_size tile_size)
++VISIBLE_IF_KUNIT unsigned int get_blk_size_bytes(const enum source_macro_tile_size tile_size)
+ {
+ 	if (tile_size == dm_256k_tile)
+ 		return (256 * 1024);
+@@ -1683,7 +1684,3 @@ static void calculate_ttu_cursor(struct display_mode_lib *mode_lib,
+ 		ASSERT(*refcyc_per_req_delivery_cur < dml_pow(2, 13));
+ 	}
+ }
+-
+-#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
+-#include "../../../test/kunit/dc/dml/dcn20/display_rq_dlg_calc_20_test.c"
+-#endif
+diff --git a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.h b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.h
+index 8b23867e97c1..bc5ba6aa3b41 100644
+--- a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.h
++++ b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.h
+@@ -70,4 +70,10 @@ void dml20_rq_dlg_get_dlg_reg(
+ 		const bool ignore_viewport_pos,
+ 		const bool immediate_flip_support);
+ 
++#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
++unsigned int get_bytes_per_element(enum source_format_class source_format, bool is_chroma);
++bool is_dual_plane(enum source_format_class source_format);
++unsigned int get_blk_size_bytes(const enum source_macro_tile_size tile_size);
++#endif
++
+ #endif
+diff --git a/drivers/gpu/drm/amd/display/test/kunit/Makefile b/drivers/gpu/drm/amd/display/test/kunit/Makefile
+index 0e2551f44a91..882fdac0fcc3 100644
+--- a/drivers/gpu/drm/amd/display/test/kunit/Makefile
++++ b/drivers/gpu/drm/amd/display/test/kunit/Makefile
+@@ -2,16 +2,24 @@
+ #
+ # Makefile for the KUnit Tests for DC
+ #
++#
+ 
+ ifdef CONFIG_DRM_AMD_DC_KUNIT_TEST
+-	DC_TESTS += dc/basics/fixpt31_32_test.o
+-	DC_TESTS += dc/basics/bw_fixed_test.o
++DC_TESTS += dc/dc_dmub_srv_test.o
++
++DC_TESTS += dc/basics/fixpt31_32_test.o
++DC_TESTS += dc/basics/bw_fixed_test.o
++
++DC_TESTS += dc/dml/display_mode_vba_test.o
+ 
+-	CFLAGS_$(AMDDALPATH)/test/kunit/dc/dml/display_mode_vba_test.o := $(dml_ccflags)
+-	CFLAGS_$(AMDDALPATH)/test/kunit/dc/dml/dcn20/dcn20_fpu_test.o := $(dml_ccflags)
+-	DC_TESTS += dc/dml/display_mode_vba_test.o dc/dml/dcn20/dcn20_fpu_test.o
++DC_TESTS += dc/dml/dcn20/display_rq_dlg_calc_20_test.o
++DC_TESTS += dc/dml/dcn20/display_mode_vba_20_test.o
++DC_TESTS += dc/dml/dcn20/dcn20_fpu_test.o
++
++CFLAGS_$(AMDDALPATH)/test/kunit/dc/dml/display_mode_vba_test.o := $(dml_ccflags)
++CFLAGS_$(AMDDALPATH)/test/kunit/dc/dml/dcn20/display_mode_vba_20_test.o := $(dml_ccflags)
++CFLAGS_$(AMDDALPATH)/test/kunit/dc/dml/dcn20/dcn20_fpu_test.o := $(dml_ccflags)
+ endif
+ 
+ AMD_DAL_DC_TESTS = $(addprefix $(AMDDALPATH)/test/kunit/,$(DC_TESTS))
+-
+ AMD_DISPLAY_FILES += $(AMD_DAL_DC_TESTS)
+diff --git a/drivers/gpu/drm/amd/display/test/kunit/dc/dc_dmub_srv_test.c b/drivers/gpu/drm/amd/display/test/kunit/dc/dc_dmub_srv_test.c
+index d12c4e3816b5..1fe792c77c15 100644
+--- a/drivers/gpu/drm/amd/display/test/kunit/dc/dc_dmub_srv_test.c
++++ b/drivers/gpu/drm/amd/display/test/kunit/dc/dc_dmub_srv_test.c
+@@ -7,6 +7,7 @@
+ 
+ #include <kunit/test.h>
+ #include "dc_dmub_srv.h"
++#include "resource.h"
+ 
+ /**
+  * DOC: overview
+diff --git a/drivers/gpu/drm/amd/display/test/kunit/dc/dml/dcn20/display_mode_vba_20_test.c b/drivers/gpu/drm/amd/display/test/kunit/dc/dml/dcn20/display_mode_vba_20_test.c
+index b3202c3152d7..81ff3f60ade2 100644
+--- a/drivers/gpu/drm/amd/display/test/kunit/dc/dml/dcn20/display_mode_vba_20_test.c
++++ b/drivers/gpu/drm/amd/display/test/kunit/dc/dml/dcn20/display_mode_vba_20_test.c
+@@ -6,8 +6,15 @@
+  */
+ 
+ #include <kunit/test.h>
++#include "dml/display_mode_lib.h"
++#include "dml/dcn20/display_mode_vba_20.h"
++#include "dml/dml_inline_defs.h"
+ #include "dml/display_mode_enums.h"
+ 
++#define BPP_INVALID 0
++#define BPP_BLENDED_PIPE 0xffffffff
++#define DCN20_MAX_420_IMAGE_WIDTH 4096
++
+ struct calculate_write_back_delay_test_case {
+ 	const char *desc;
+ 	const enum source_format_class writeback_pixel_format;
+diff --git a/drivers/gpu/drm/amd/display/test/kunit/dc/dml/dcn20/display_rq_dlg_calc_20_test.c b/drivers/gpu/drm/amd/display/test/kunit/dc/dml/dcn20/display_rq_dlg_calc_20_test.c
+index e6d3e356205c..956fecc23d49 100644
+--- a/drivers/gpu/drm/amd/display/test/kunit/dc/dml/dcn20/display_rq_dlg_calc_20_test.c
++++ b/drivers/gpu/drm/amd/display/test/kunit/dc/dml/dcn20/display_rq_dlg_calc_20_test.c
+@@ -7,6 +7,7 @@
+ 
+ #include <kunit/test.h>
+ #include "dml/display_mode_lib.h"
++#include "dml/dcn20/display_rq_dlg_calc_20.h"
+ 
+ /**
+  * get_bytes_per_element_test - KUnit test for get_bytes_per_element
+-- 
+2.44.0
+

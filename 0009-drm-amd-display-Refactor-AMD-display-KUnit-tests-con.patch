@@ -1,0 +1,154 @@
+From 5bd8dadac532282d047716ca6fcf9806f6740973 Mon Sep 17 00:00:00 2001
+From: Joao Paulo Pereira da Silva <jppaulo11@hotmail.com>
+Date: Mon, 13 May 2024 10:38:35 -0300
+Subject: [PATCH 09/13] drm/amd/display: Refactor AMD display KUnit tests
+ configs
+
+For now, there is no need of 4 Configs only for testing Display Core.
+Therefore, to simplify the tests, remove 3 and use only one:
+DRM_AMD_DC_KUNIT_TEST.
+
+Signed-off-by: Joao Paulo Pereira da Silva <jppaulo11@usp.br>
+---
+ drivers/gpu/drm/amd/display/Kconfig           | 47 ++-----------------
+ drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c  |  2 +-
+ .../dc/dml/dcn20/display_mode_vba_20.c        |  2 +-
+ .../dc/dml/dcn20/display_rq_dlg_calc_20.c     |  2 +-
+ .../drm/amd/display/test/kunit/.kunitconfig   |  5 +-
+ .../gpu/drm/amd/display/test/kunit/Makefile   |  4 +-
+ 6 files changed, 9 insertions(+), 53 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/display/Kconfig b/drivers/gpu/drm/amd/display/Kconfig
+index 11b0e54262f3..542cbd849938 100644
+--- a/drivers/gpu/drm/amd/display/Kconfig
++++ b/drivers/gpu/drm/amd/display/Kconfig
+@@ -51,12 +51,12 @@ config DRM_AMD_SECURE_DISPLAY
+ 	  This option enables the calculation of crc of specific region via
+ 	  debugfs. Cooperate with specific DMCU FW.
+ 
+-config DCE_KUNIT_TEST
+-	bool "Run all KUnit tests for DCE" if !KUNIT_ALL_TESTS
+-	depends on DRM_AMD_DC && KUNIT
++config DRM_AMD_DC_KUNIT_TEST
++	bool "Enable KUnit tests for DC" if !KUNIT_ALL_TESTS
++	depends on DRM_AMD_DC && KUNIT && DRM_AMD_DC_FP
+ 	default KUNIT_ALL_TESTS
+ 	help
+-		Enables unit tests for the Display Controller Engine. Only useful for kernel
++		Enables unit tests for Display Core. Only useful for kernel
+ 		devs running KUnit.
+ 
+ 		For more information on KUnit and unit tests in general please refer to
+@@ -64,43 +64,4 @@ config DCE_KUNIT_TEST
+ 
+ 		If unsure, say N.
+ 
+-config DML_KUNIT_TEST
+-	bool "Run all KUnit tests for DML" if !KUNIT_ALL_TESTS
+-	depends on DRM_AMD_DC_FP && KUNIT
+-	default KUNIT_ALL_TESTS
+-	help
+-		Enables unit tests for the Display Controller Engine. Only useful for kernel
+-		devs running KUnit.
+-
+-		For more information on KUnit and unit tests in general please refer to
+-		the KUnit documentation in Documentation/dev-tools/kunit/.
+-
+-		If unsure, say N.
+-
+-config AMD_DC_BASICS_KUNIT_TEST
+-	bool "Enable KUnit tests for the 'basics' sub-component of DAL" if !KUNIT_ALL_TESTS
+-	depends on DRM_AMD_DC && KUNIT
+-	default KUNIT_ALL_TESTS
+-	help
+-		Enables unit tests for the Display Core. Only useful for kernel
+-		devs running KUnit.
+-
+-		For more information on KUnit and unit tests in general please refer to
+-		the KUnit documentation in Documentation/dev-tools/kunit/.
+-
+-		If unsure, say N.
+-
+-config AMD_DC_KUNIT_TEST
+-	bool "Enable KUnit tests for the 'utils' sub-component of DAL" if !KUNIT_ALL_TESTS
+-	depends on DRM_AMD_DC && KUNIT
+-	default KUNIT_ALL_TESTS
+-	help
+-		Enables unit tests for the basics folder of Display Core. Only useful for
+-		kernel devs running KUnit.
+-
+-		For more information on KUnit and unit tests in general please refer to
+-		the KUnit documentation in Documentation/dev-tools/kunit/.
+-
+-		If unsure, say N.
+-
+ endmenu
+diff --git a/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c b/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c
+index 6f31f2f39cb9..467ebc254e37 100644
+--- a/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c
++++ b/drivers/gpu/drm/amd/display/dc/dc_dmub_srv.c
+@@ -1595,6 +1595,6 @@ bool dc_wake_and_execute_gpint(const struct dc_context *ctx, enum dmub_gpint_com
+ 	return result;
+ }
+ 
+-#if IS_ENABLED(CONFIG_AMD_DC_KUNIT_TEST)
++#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
+ #include "../test/kunit/dc/dc_dmub_srv_test.c"
+ #endif
+diff --git a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.c b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.c
+index aea6e29fd6e5..2f5dc1ee917b 100644
+--- a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.c
++++ b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_mode_vba_20.c
+@@ -5117,6 +5117,6 @@ void dml20_ModeSupportAndSystemConfigurationFull(struct display_mode_lib *mode_l
+ 	}
+ }
+ 
+-#if IS_ENABLED(CONFIG_DML_KUNIT_TEST)
++#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
+ #include "../../test/kunit/dc/dml/dcn20/display_mode_vba_20_test.c"
+ #endif
+diff --git a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.c b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.c
+index 45f75a7f84c7..7c294b4fc06d 100644
+--- a/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.c
++++ b/drivers/gpu/drm/amd/display/dc/dml/dcn20/display_rq_dlg_calc_20.c
+@@ -1684,6 +1684,6 @@ static void calculate_ttu_cursor(struct display_mode_lib *mode_lib,
+ 	}
+ }
+ 
+-#if IS_ENABLED(CONFIG_DML_KUNIT_TEST)
++#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
+ #include "../../../test/kunit/dc/dml/dcn20/display_rq_dlg_calc_20_test.c"
+ #endif
+diff --git a/drivers/gpu/drm/amd/display/test/kunit/.kunitconfig b/drivers/gpu/drm/amd/display/test/kunit/.kunitconfig
+index 4c5861ad58bd..6f2d2d114098 100644
+--- a/drivers/gpu/drm/amd/display/test/kunit/.kunitconfig
++++ b/drivers/gpu/drm/amd/display/test/kunit/.kunitconfig
+@@ -3,7 +3,4 @@ CONFIG_PCI=y
+ CONFIG_DRM=y
+ CONFIG_DRM_AMDGPU=y
+ CONFIG_DRM_AMD_DC=y
+-CONFIG_AMD_DC_BASICS_KUNIT_TEST=y
+-CONFIG_AMD_DC_KUNIT_TEST=y
+-CONFIG_DCE_KUNIT_TEST=y
+-CONFIG_DML_KUNIT_TEST=y
++CONFIG_DRM_AMD_DC_KUNIT_TEST=y
+diff --git a/drivers/gpu/drm/amd/display/test/kunit/Makefile b/drivers/gpu/drm/amd/display/test/kunit/Makefile
+index a6ad449f9885..34db41ec333c 100644
+--- a/drivers/gpu/drm/amd/display/test/kunit/Makefile
++++ b/drivers/gpu/drm/amd/display/test/kunit/Makefile
+@@ -3,11 +3,9 @@
+ # Makefile for the KUnit Tests for DC
+ #
+ 
+-ifdef CONFIG_AMD_DC_BASICS_KUNIT_TEST
++ifdef CONFIG_DRM_AMD_DC_KUNIT_TEST
+ 	DC_TESTS += dc/basics/fixpt31_32_test.o
+-endif
+ 
+-ifdef CONFIG_DML_KUNIT_TEST
+ 	CFLAGS_$(AMDDALPATH)/test/kunit/dc/dml/display_mode_vba_test.o := $(dml_ccflags)
+ 	CFLAGS_$(AMDDALPATH)/test/kunit/dc/dml/dcn20/dcn20_fpu_test.o := $(dml_ccflags)
+ 	DC_TESTS += dc/dml/display_mode_vba_test.o dc/dml/dcn20/dcn20_fpu_test.o
+-- 
+2.44.0
+

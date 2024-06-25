@@ -1,0 +1,129 @@
+From 9a913f78789b449c6424b86081a533357aa745b5 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Ma=C3=ADra=20Canal?= <mairacanal@riseup.net>
+Date: Thu, 22 Feb 2024 08:56:20 -0700
+Subject: [PATCH 07/13] Documentation/gpu: Add Display Core Unit Test
+ documentation
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Explain how to run the KUnit tests present in the AMDGPU's Display
+Core and clarify which architectures and tools can be used to run
+the tests. Moreover, explains how to add new tests to the existing
+tests.
+
+Signed-off-by: Maíra Canal <mairacanal@riseup.net>
+---
+ .../gpu/amdgpu/display/display-test.rst       | 88 +++++++++++++++++++
+ Documentation/gpu/amdgpu/display/index.rst    |  1 +
+ 2 files changed, 89 insertions(+)
+ create mode 100644 Documentation/gpu/amdgpu/display/display-test.rst
+
+diff --git a/Documentation/gpu/amdgpu/display/display-test.rst b/Documentation/gpu/amdgpu/display/display-test.rst
+new file mode 100644
+index 000000000000..a8c136ce87b7
+--- /dev/null
++++ b/Documentation/gpu/amdgpu/display/display-test.rst
+@@ -0,0 +1,88 @@
++.. SPDX-License-Identifier: GPL-2.0+
++
++========================
++Display Core Unit Tests
++========================
++
++Display core provides a set of unit tests, currently focused on the Display Mode
++Library. The unit tests use KUnit (Kernel Unit Testing Framework), a common
++framework for unit tests within the Linux Kernel.
++
++This section covers the specifics of the tests for the AMDGPU driver. For general
++information about KUnit, please refer to Documentation/dev-tools/kunit/start.rst.
++
++How to run the tests?
++=====================
++
++In order to facilitate running the test suite, a configuration file is present
++in ``drivers/gpu/drm/amd/display/tests/dc/.kunitconfig``. This configuration file
++can be used to run the kunit_tool, a Python script (``tools/testing/kunit/kunit.py``)
++used to configure, build, exec, parse and run tests.
++
++.. code-block:: bash
++
++	$ ./tools/testing/kunit/kunit.py run --arch=x86_64 \
++	    --kunitconfig=drivers/gpu/drm/amd/display/tests
++
++Currently, the Display Core Unit Tests are only supported on x86_64.
++
++Moreover, the tests can also be run on real hardware or in other emulation
++environments. To include the Display Core Unit Tests on a deployable kernel,
++you might add the following config options to your ``.config``:
++
++.. code-block:: none
++
++	CONFIG_KUNIT=y
++	CONFIG_AMDGPU=m
++	CONFIG_AMD_DC_BASICS_KUNIT_TEST=y
++	CONFIG_AMD_DC_KUNIT_TEST=y
++	CONFIG_DCE_KUNIT_TEST=y
++	CONFIG_DML_KUNIT_TEST=y
++
++Once the kernel is built and installed, you can load the ``amdgpu`` module
++to run all tests available.
++
++Also, the tests can be added to the kernel as built-in modules, by adding the
++following config options to your ``.config``:
++
++.. code-block:: none
++
++	CONFIG_KUNIT=y
++	CONFIG_AMDGPU=y
++	CONFIG_AMD_DC_BASICS_KUNIT_TEST=y
++	CONFIG_AMD_DC_KUNIT_TEST=y
++	CONFIG_DCE_KUNIT_TEST=y
++	CONFIG_DML_KUNIT_TEST=y
++
++In order to run specific tests, you can check the filter options from KUnit on
++Documentation/dev-tools/kunit/kunit-tool.rst.
++
++How to add new tests?
++=====================
++
++Tests covering different parts of the Display Core are always welcomed. Adding
++a new test is a simple procedure, that consists in creating a unit test file
++and adding the following guard to the end of the tested file when you are
++testing static functions:
++
++.. code-block:: c
++
++	#ifdef CONFIG_MY_KUNIT_TEST
++	#include "my_kunit_test.c"
++	#endif
++
++If you are not testing static functions, you should use the Makefile placed on
++``display/tests``. In order to add a test to the Makefile, you can just add
++the following entry to the Makefile:
++
++.. code-block:: make
++
++	ifdef CONFIG_MY_KUNIT_TEST
++		DC_TESTS += my_kunit_test.o
++	endif
++
++The ``display/tests`` folder replicates the folder hierarchy of the ``display``
++folder, so this must be considered while adding new tests.
++
++More information on how to write unit tests with the KUnit API can be provided
++on Documentation/dev-tools/kunit/api/test.rst.
+diff --git a/Documentation/gpu/amdgpu/display/index.rst b/Documentation/gpu/amdgpu/display/index.rst
+index f0c342e00a39..e5895e658943 100644
+--- a/Documentation/gpu/amdgpu/display/index.rst
++++ b/Documentation/gpu/amdgpu/display/index.rst
+@@ -92,5 +92,6 @@ table of content:
+    dcn-blocks.rst
+    mpo-overview.rst
+    dc-debug.rst
++   display-test.rst
+    display-contributing.rst
+    dc-glossary.rst
+-- 
+2.44.0
+

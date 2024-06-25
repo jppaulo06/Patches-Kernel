@@ -1,0 +1,89 @@
+From fe6ffe77262e484aef50786085691143ecd4f704 Mon Sep 17 00:00:00 2001
+From: Joao Paulo Pereira da Silva <jppaulo11@hotmail.com>
+Date: Mon, 13 May 2024 10:47:50 -0300
+Subject: [PATCH 10/13] drm/amd/display/test: Fix kunit test that is not
+ running
+
+The KUnit test file test/kunit/dc/dml/calcs/bw_fixed_test.c does not have the
+correct path relative to the file being tested, dc/basics/bw_fixed.c.
+Also, it is neither compiling nor running. Therefore, change the test
+file path and make updates to run the test the recommended way.
+
+Signed-off-by: Joao Paulo Pereira da Silva <jppaulo11@usp.br>
+---
+ drivers/gpu/drm/amd/display/dc/basics/bw_fixed.c            | 3 ++-
+ drivers/gpu/drm/amd/display/dc/inc/bw_fixed.h               | 4 ++++
+ drivers/gpu/drm/amd/display/test/kunit/Makefile             | 1 +
+ .../test/kunit/dc/{dml/calcs => basics}/bw_fixed_test.c     | 6 ++++++
+ 4 files changed, 13 insertions(+), 1 deletion(-)
+ rename drivers/gpu/drm/amd/display/test/kunit/dc/{dml/calcs => basics}/bw_fixed_test.c (99%)
+
+diff --git a/drivers/gpu/drm/amd/display/dc/basics/bw_fixed.c b/drivers/gpu/drm/amd/display/dc/basics/bw_fixed.c
+index c8cb89e0d4d0..41f7a0b1f7ad 100644
+--- a/drivers/gpu/drm/amd/display/dc/basics/bw_fixed.c
++++ b/drivers/gpu/drm/amd/display/dc/basics/bw_fixed.c
+@@ -25,6 +25,7 @@
+  */
+ #include "dm_services.h"
+ #include "bw_fixed.h"
++#include <kunit/visibility.h>
+ 
+ #define MAX_I64 \
+ 	((int64_t)((1ULL << 63) - 1))
+@@ -38,7 +39,7 @@
+ #define GET_FRACTIONAL_PART(x) \
+ 	(FRACTIONAL_PART_MASK & (x))
+ 
+-static uint64_t abs_i64(int64_t arg)
++VISIBLE_IF_KUNIT uint64_t abs_i64(int64_t arg)
+ {
+ 	if (arg >= 0)
+ 		return (uint64_t)(arg);
+diff --git a/drivers/gpu/drm/amd/display/dc/inc/bw_fixed.h b/drivers/gpu/drm/amd/display/dc/inc/bw_fixed.h
+index d1656c9d50df..4da81f70c9c0 100644
+--- a/drivers/gpu/drm/amd/display/dc/inc/bw_fixed.h
++++ b/drivers/gpu/drm/amd/display/dc/inc/bw_fixed.h
+@@ -163,4 +163,8 @@ static inline bool bw_mtn(const struct bw_fixed arg1, const struct bw_fixed arg2
+ 	return arg1.value > arg2.value;
+ }
+ 
++#if IS_ENABLED(CONFIG_DRM_AMD_DC_KUNIT_TEST)
++uint64_t abs_i64(int64_t arg);
++#endif
++
+ #endif //BW_FIXED_H_
+diff --git a/drivers/gpu/drm/amd/display/test/kunit/Makefile b/drivers/gpu/drm/amd/display/test/kunit/Makefile
+index 34db41ec333c..0e2551f44a91 100644
+--- a/drivers/gpu/drm/amd/display/test/kunit/Makefile
++++ b/drivers/gpu/drm/amd/display/test/kunit/Makefile
+@@ -5,6 +5,7 @@
+ 
+ ifdef CONFIG_DRM_AMD_DC_KUNIT_TEST
+ 	DC_TESTS += dc/basics/fixpt31_32_test.o
++	DC_TESTS += dc/basics/bw_fixed_test.o
+ 
+ 	CFLAGS_$(AMDDALPATH)/test/kunit/dc/dml/display_mode_vba_test.o := $(dml_ccflags)
+ 	CFLAGS_$(AMDDALPATH)/test/kunit/dc/dml/dcn20/dcn20_fpu_test.o := $(dml_ccflags)
+diff --git a/drivers/gpu/drm/amd/display/test/kunit/dc/dml/calcs/bw_fixed_test.c b/drivers/gpu/drm/amd/display/test/kunit/dc/basics/bw_fixed_test.c
+similarity index 99%
+rename from drivers/gpu/drm/amd/display/test/kunit/dc/dml/calcs/bw_fixed_test.c
+rename to drivers/gpu/drm/amd/display/test/kunit/dc/basics/bw_fixed_test.c
+index 1369da49f444..554f0ba3bd0e 100644
+--- a/drivers/gpu/drm/amd/display/test/kunit/dc/dml/calcs/bw_fixed_test.c
++++ b/drivers/gpu/drm/amd/display/test/kunit/dc/basics/bw_fixed_test.c
+@@ -11,6 +11,12 @@
+ #include <drm/drm_util.h>
+ #include "bw_fixed.h"
+ 
++#define MAX_I64 \
++	((int64_t)((1ULL << 63) - 1))
++
++#define MIN_I64 \
++	(-MAX_I64 - 1)
++
+ /**
+  * DOC: Unit tests for AMDGPU DML calcs/bw_fixed.h
+  *
+-- 
+2.44.0
+
